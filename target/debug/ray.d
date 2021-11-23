@@ -1,1 +1,0 @@
-c:\Users\Justin\ Pan\code\rust\target\debug\ray.exe: c:\Users\Justin\ Pan\code\rust\src\main.rs c:\Users\Justin\ Pan\code\rust\src\mat.rs c:\Users\Justin\ Pan\code\rust\src\ray.rs c:\Users\Justin\ Pan\code\rust\src\vec3f.rs
