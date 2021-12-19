@@ -6,6 +6,13 @@ mod ray;
 use std::fs;
 use std::io::Write;
 
+struct HitRecord
+{
+    t: f32,
+    p: vec3f::Vec3f32,
+    normal: vec3f::Vec3f32,
+}
+
 fn dot (first: &vec3f::Vec3f32, second: &vec3f::Vec3f32) -> f32
 {
     (first.x * second.x) + (first.y * second.y) + (first.z * second.z)
@@ -45,7 +52,7 @@ fn color(r: &mut ray::Ray) -> vec3f::Vec3f32
 
 fn main() {
     fs::create_dir_all("../data").unwrap();
-    let mut file = fs::File::create("../data/foo.ppm").unwrap();
+    let mut file = fs::File::create("j:/rust/data/foo.ppm").unwrap();
 
     let nx: f32 = 200f32;
     let ny: f32 = 100f32;
