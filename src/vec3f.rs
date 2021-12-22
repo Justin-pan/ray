@@ -51,6 +51,11 @@ impl Vec3f32
         ((self.x * self.x) + (self.y * self.y) + (self.z * self.z)).sqrt()
     }
 
+    pub fn length(&self) -> f32
+    {
+        (self.x * self.x) + (self.y * self.y) + (self.z * self.z)
+    }
+
     pub fn normalize(&self) -> Vec3f32
     {
         let magnitude = self.dot_product(&self).sqrt();
@@ -70,6 +75,11 @@ impl Vec3f32
             y: new_y,
             z: new_z,
         }
+    }
+
+    pub fn unit_vector(&self) -> Vec3f32
+    {
+        *self / self.length()
     }
 
     pub fn write_vec_as_int(&self, file: &mut File)
@@ -164,6 +174,21 @@ impl std::ops::Sub<f32> for Vec3f32
             x: self.x - other,
             y: self.y - other,
             z: self.z - other,
+        }
+    }
+}
+
+impl std::ops::Div<f32> for Vec3f32
+{
+    type Output = Self;
+
+    fn div (self, other: f32) -> Self
+    {
+        Self
+        {
+            x: self.x / other,
+            y: self.y / other,
+            z: self.z / other,
         }
     }
 }
