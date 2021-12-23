@@ -14,6 +14,14 @@ struct HitRecord
     normal: vec3f::Vec3f32,
 }
 
+struct Camera
+{
+    lower_left_corner: vec3f::Vec3f32,
+    horizontal: vec3f::Vec3f32,
+    vertical: vec3f::Vec3f32,
+    origin: vec3f::Vec3f32,
+}
+
 fn dot (first: &vec3f::Vec3f32, second: &vec3f::Vec3f32) -> f32
 {
     (first.x * second.x) + (first.y * second.y) + (first.z * second.z)
@@ -88,6 +96,12 @@ fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)], tmin: f32, tmax: f3
     }
 }
 
+fn direction_from_camera(camera: &Camera, u: f32, v: f32)
+                         -> vec3f::Vec3f32
+{
+    camera.lower_left_corner + camera.horizontal * u + camera.vertical * v - camera.origin
+}
+
 fn main() {
     let mut rng = rand::thread_rng();
     fs::create_dir_all("../data").unwrap();
@@ -103,10 +117,13 @@ fn main() {
     let ny: f32 = 300f32;
     let ns: f32 = 50f32;
     write!(&mut file, "P3\n {} {}\n255\n", nx, ny).unwrap();
-    let lower_left_corner = vec3f::Vec3f32::new_from_points(-2.0, -1.0, -1.0);
-    let horizontal = vec3f::Vec3f32::new_from_points(4.0, 0.0, 0.0);
-    let vertical = vec3f::Vec3f32::new_from_points(0.0, 2.0, 0.0);
-    let origin = vec3f::Vec3f32::new_from_points(0.0, 0.0, 0.0);
+    let camera = Camera
+    {
+        lower_left_corner: vec3f::Vec3f32::new_from_points(-2.0, -1.0, -1.0),
+        horizontal: vec3f::Vec3f32::new_from_points(4.0, 0.0, 0.0),
+        vertical: vec3f::Vec3f32::new_from_points(0.0, 2.0, 0.0),
+        origin: vec3f::Vec3f32::new_from_points(0.0, 0.0, 0.0),
+    };
     for j in (0 .. ny as u32).rev()
     {
         for i in 0 .. nx as u32
@@ -116,7 +133,7 @@ fn main() {
             {
                 let u = (i as f32 + rng.gen::<f32>()) / nx;
                 let v = (j as f32 + rng.gen::<f32>()) / ny;
-                let mut r = ray::Ray::new_from_vector(&origin, &(lower_left_corner + horizontal * u + vertical * v - origin));
+                let mut r = ray::Ray::new_from_vector(&camera.origin, &direction_from_camera(&camera, u, v));
 
                 col += color(&mut r, &world, 0.0, f32::MAX);
             }
