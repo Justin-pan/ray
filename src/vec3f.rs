@@ -193,6 +193,16 @@ impl std::ops::Div<f32> for Vec3f32
     }
 }
 
+impl std::ops::DivAssign<f32> for Vec3f32
+{
+    fn div_assign(&mut self, other: f32)
+    {
+        self.x /= other;
+        self.y /= other;
+        self.z /= other;
+    }
+}
+
 impl std::ops::MulAssign<f32> for Vec3f32
 {
     fn mul_assign(&mut self, other: f32)
@@ -210,5 +220,15 @@ impl std::ops::MulAssign<Vec3f32> for Vec3f32
         self.x *= other.x;
         self.y *= other.y;
         self.z *= other.z;
+    }
+}
+
+impl std::ops::AddAssign<Vec3f32> for Vec3f32
+{
+    fn add_assign(&mut self, other: Vec3f32)
+    {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
     }
 }

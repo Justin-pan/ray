@@ -5,6 +5,7 @@ mod ray;
 
 use std::fs;
 use std::io::Write;
+use rand::Rng;
 
 struct HitRecord
 {
@@ -88,6 +89,7 @@ fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)], tmin: f32, tmax: f3
 }
 
 fn main() {
+    let mut rng = rand::thread_rng();
     fs::create_dir_all("../data").unwrap();
     //let mut file = fs::File::create("j:/rust/data/foo.ppm").unwrap();
     let mut file = fs::File::create("/home/justin/Documents/ray/data/foo.ppm").unwrap();
@@ -99,6 +101,7 @@ fn main() {
 
     let nx: f32 = 600f32;
     let ny: f32 = 300f32;
+    let ns: f32 = 50f32;
     write!(&mut file, "P3\n {} {}\n255\n", nx, ny).unwrap();
     let lower_left_corner = vec3f::Vec3f32::new_from_points(-2.0, -1.0, -1.0);
     let horizontal = vec3f::Vec3f32::new_from_points(4.0, 0.0, 0.0);
@@ -108,12 +111,18 @@ fn main() {
     {
         for i in 0 .. nx as u32
         {
-            let u = (i as f32) / nx;
-            let v = (j as f32) / ny;
-            let mut r = ray::Ray::new_from_vector(&origin, &(lower_left_corner + horizontal * u + vertical * v));
+            let mut col = vec3f::Vec3f32::zeroes();
+            for _s in 0 .. ns as u32
+            {
+                let u = (i as f32 + rng.gen::<f32>()) / nx;
+                let v = (j as f32 + rng.gen::<f32>()) / ny;
+                let mut r = ray::Ray::new_from_vector(&origin, &(lower_left_corner + horizontal * u + vertical * v - origin));
+
+                col += color(&mut r, &world, 0.0, f32::MAX);
+            }
 
 
-            let mut col = color(&mut r, &world, 0.0, f32::MAX);
+            col /= ns;
             col *= 255.99f32;
             col.write_vec_as_int(&mut file);
         }
