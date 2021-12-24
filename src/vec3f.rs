@@ -46,12 +46,12 @@ impl Vec3f32
         }
     }
 
-    pub fn norm(&self) -> f32
+    pub fn length(&self) -> f32
     {
         ((self.x * self.x) + (self.y * self.y) + (self.z * self.z)).sqrt()
     }
 
-    pub fn length(&self) -> f32
+    pub fn squared_length(&self) -> f32
     {
         (self.x * self.x) + (self.y * self.y) + (self.z * self.z)
     }

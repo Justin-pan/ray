@@ -5,7 +5,7 @@ mod ray;
 
 use std::fs;
 use std::io::Write;
-use rand::Rng;
+use rand;
 
 struct HitRecord
 {
@@ -20,6 +20,19 @@ struct Camera
     horizontal: vec3f::Vec3f32,
     vertical: vec3f::Vec3f32,
     origin: vec3f::Vec3f32,
+}
+
+fn random_in_unit_sphere() -> vec3f::Vec3f32
+{
+    let mut p = vec3f::Vec3f32::new_from_points(1.5, 1.5, 1.5);
+    while p.squared_length() >= 1f32
+    {
+        p = (vec3f::Vec3f32::new_from_points(rand::random::<f32>(),
+                                             rand::random::<f32>(),
+                                             rand::random::<f32>()) * 2.0) -
+            vec3f::Vec3f32::new_from_points(1.0, 1.0, 1.0);
+    }
+    p
 }
 
 fn dot (first: &vec3f::Vec3f32, second: &vec3f::Vec3f32) -> f32
@@ -62,7 +75,8 @@ fn hit_sphere(center: &vec3f::Vec3f32, radius: &f32, r: &mut ray::Ray,
     false
 }
 
-fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)], tmin: f32, tmax: f32) -> vec3f::Vec3f32
+fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)],
+         tmin: f32, tmax: f32) -> vec3f::Vec3f32
 {
     let mut rec = HitRecord
     {
@@ -75,7 +89,8 @@ fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)], tmin: f32, tmax: f3
     for i in spheres
     {
         let (x, y, z, radius) = i;
-        if hit_sphere(&vec3f::Vec3f32::new_from_points(*x, *y, *z), radius, r, tmin, closest_so_far, &mut rec)
+        if hit_sphere(&vec3f::Vec3f32::new_from_points(*x, *y, *z),
+                      radius, r, tmin, closest_so_far, &mut rec)
         {
             hit_anything = true;
             closest_so_far = rec.t;
@@ -84,14 +99,19 @@ fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)], tmin: f32, tmax: f3
 
     if hit_anything
     {
-        vec3f::Vec3f32::new_from_points(rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0) * 0.5
+        let target = rec.p + rec.normal + random_in_unit_sphere();
+        let mut new_ray = ray::Ray::new_from_vector(&rec.p,
+                                                    &(target - rec.p));
+        return color(&mut new_ray, spheres, tmin, tmax) * 0.5;
     }
     else
     {
         let unit_direction = r.direction().unit_vector();
         let t = 0.5 * (unit_direction.y + 1.0);
-        let v1 = (vec3f::Vec3f32::new_from_points(1.0, 1.0, 1.0)) * (1.0 - t);
-        let v2 = (vec3f::Vec3f32::new_from_points(0.5, 0.7, 1.0)) * t;
+        let v1 = (vec3f::Vec3f32::new_from_points(1.0, 1.0, 1.0))
+            * (1.0 - t);
+        let v2 = (vec3f::Vec3f32::new_from_points(0.5, 0.7, 1.0))
+            * t;
         v1 + v2
     }
 }
@@ -99,11 +119,11 @@ fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)], tmin: f32, tmax: f3
 fn direction_from_camera(camera: &Camera, u: f32, v: f32)
                          -> vec3f::Vec3f32
 {
-    camera.lower_left_corner + camera.horizontal * u + camera.vertical * v - camera.origin
+    camera.lower_left_corner + camera.horizontal * u +
+        camera.vertical * v - camera.origin
 }
 
 fn main() {
-    let mut rng = rand::thread_rng();
     fs::create_dir_all("../data").unwrap();
     //let mut file = fs::File::create("j:/rust/data/foo.ppm").unwrap();
     let mut file = fs::File::create("/home/justin/Documents/ray/data/foo.ppm").unwrap();
@@ -115,7 +135,7 @@ fn main() {
 
     let nx: f32 = 600f32;
     let ny: f32 = 300f32;
-    let ns: f32 = 50f32;
+    let ns: f32 = 100f32;
     write!(&mut file, "P3\n {} {}\n255\n", nx, ny).unwrap();
     let camera = Camera
     {
@@ -131,15 +151,20 @@ fn main() {
             let mut col = vec3f::Vec3f32::zeroes();
             for _s in 0 .. ns as u32
             {
-                let u = (i as f32 + rng.gen::<f32>()) / nx;
-                let v = (j as f32 + rng.gen::<f32>()) / ny;
-                let mut r = ray::Ray::new_from_vector(&camera.origin, &direction_from_camera(&camera, u, v));
+                let u = (i as f32 + rand::random::<f32>()) / nx;
+                let v = (j as f32 + rand::random::<f32>()) / ny;
+                let direction = direction_from_camera(&camera, u, v);
+                let mut r = ray::Ray::new_from_vector(&camera.origin,
+                                                      &direction);
 
-                col += color(&mut r, &world, 0.0, f32::MAX);
+                col += color(&mut r, &world, 0.00001, f32::MAX);
             }
 
 
             col /= ns;
+            col.x = col.x.sqrt();
+            col.y = col.y.sqrt();
+            col.z = col.z.sqrt();
             col *= 255.99f32;
             col.write_vec_as_int(&mut file);
         }
