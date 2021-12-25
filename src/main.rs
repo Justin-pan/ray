@@ -7,11 +7,25 @@ use std::fs;
 use std::io::Write;
 use rand;
 
+enum Material
+{
+    Lambertian,
+    Metal,
+}
+
 struct HitRecord
 {
     t: f32,
     p: vec3f::Vec3f32,
     normal: vec3f::Vec3f32,
+}
+
+struct Sphere
+{
+    centre: vec3f::Vec3f32,
+    radius: f32,
+    material: Material,
+    albedo: vec3f::Vec3f32
 }
 
 struct Camera
@@ -40,7 +54,7 @@ fn dot (first: &vec3f::Vec3f32, second: &vec3f::Vec3f32) -> f32
     (first.x * second.x) + (first.y * second.y) + (first.z * second.z)
 }
 
-fn hit_sphere(center: &vec3f::Vec3f32, radius: &f32, r: &mut ray::Ray,
+fn hit_sphere(center: &vec3f::Vec3f32, radius: f32, r: &mut ray::Ray,
               tmin: f32, tmax: f32, rec: &mut HitRecord) -> bool
 {
     let oc = r.origin() - *center;
@@ -60,7 +74,7 @@ fn hit_sphere(center: &vec3f::Vec3f32, radius: &f32, r: &mut ray::Ray,
         {
             rec.t = temp;
             rec.p = r.point_at_parameter(&rec.t);
-            rec.normal = (rec.p - *center) / *radius;
+            rec.normal = (rec.p - *center) / radius;
             return true;
         }
         temp = (-b + discriminant.sqrt()) / a;
@@ -68,14 +82,14 @@ fn hit_sphere(center: &vec3f::Vec3f32, radius: &f32, r: &mut ray::Ray,
         {
             rec.t = temp;
             rec.p = r.point_at_parameter(&rec.t);
-            rec.normal = (rec.p - *center) / *radius;
+            rec.normal = (rec.p - *center) / radius;
             return true;
         }
     }
     false
 }
 
-fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)],
+fn color(r: &mut ray::Ray, spheres: &[Sphere],
          tmin: f32, tmax: f32) -> vec3f::Vec3f32
 {
     let mut rec = HitRecord
@@ -88,13 +102,19 @@ fn color(r: &mut ray::Ray, spheres: &[(f32, f32, f32, f32)],
     let mut closest_so_far = tmax;
     for i in spheres
     {
-        let (x, y, z, radius) = i;
-        if hit_sphere(&vec3f::Vec3f32::new_from_points(*x, *y, *z),
-                      radius, r, tmin, closest_so_far, &mut rec)
+        if hit_sphere(&i.centre, i.radius, r, tmin, closest_so_far,
+                      &mut rec)
         {
             hit_anything = true;
             closest_so_far = rec.t;
         }
+        // let (x, y, z, radius) = i;
+        // if hit_sphere(&vec3f::Vec3f32::new_from_points(*x, *y, *z),
+        //               radius, r, tmin, closest_so_far, &mut rec)
+        // {
+        //     hit_anything = true;
+        //     closest_so_far = rec.t;
+        // }
     }
 
     if hit_anything
@@ -129,8 +149,20 @@ fn main() {
     let mut file = fs::File::create("/home/justin/Documents/ray/data/foo.ppm").unwrap();
 
     let world = [
-        (0.0, 0.0, -1.0, 0.5),
-        (0.0, -100.5, -1.0, 100.0)
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(0.0, 0.0, -1.0),
+            radius: 0.5,
+            material: Material::Lambertian,
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.3, 0.3)
+        },
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(0.0, -100.5, -1.0),
+            radius: 100.0,
+            material: Material::Lambertian,
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.3)
+        }
     ];
 
     let nx: f32 = 600f32;
