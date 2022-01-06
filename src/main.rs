@@ -25,7 +25,8 @@ struct Sphere
     centre: vec3f::Vec3f32,
     radius: f32,
     material: Material,
-    albedo: vec3f::Vec3f32
+    albedo: vec3f::Vec3f32,
+    fuzz: f32
 }
 
 struct Camera
@@ -90,7 +91,7 @@ fn hit_sphere(center: &vec3f::Vec3f32, radius: f32, r: &mut ray::Ray,
 }
 
 fn color(r: &mut ray::Ray, spheres: &[Sphere],
-         tmin: f32, tmax: f32) -> vec3f::Vec3f32
+         tmin: f32, tmax: f32, depth: i32) -> vec3f::Vec3f32
 {
     let mut rec = HitRecord
     {
@@ -100,6 +101,7 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
     };
     let mut hit_anything = false;
     let mut closest_so_far = tmax;
+    let mut current_sphere = &spheres[0];
     for i in spheres
     {
         if hit_sphere(&i.centre, i.radius, r, tmin, closest_so_far,
@@ -107,22 +109,44 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
         {
             hit_anything = true;
             closest_so_far = rec.t;
+            current_sphere = &i;
         }
-        // let (x, y, z, radius) = i;
-        // if hit_sphere(&vec3f::Vec3f32::new_from_points(*x, *y, *z),
-        //               radius, r, tmin, closest_so_far, &mut rec)
-        // {
-        //     hit_anything = true;
-        //     closest_so_far = rec.t;
-        // }
     }
 
     if hit_anything
     {
-        let target = rec.p + rec.normal + random_in_unit_sphere();
-        let mut new_ray = ray::Ray::new_from_vector(&rec.p,
-                                                    &(target - rec.p));
-        return color(&mut new_ray, spheres, tmin, tmax) * 0.5;
+        let mut scattered: ray::Ray;
+        let scatter = match current_sphere.material
+        {
+            Material::Lambertian =>
+            {
+                let target = rec.p + rec.normal
+                    + random_in_unit_sphere();
+                scattered = ray::Ray::new_from_vector(&rec.p, &(target - rec.p));
+                true
+            },
+
+            Material::Metal =>
+            {
+                let unit_direction = r.direction().unit_vector();
+                let reflected = unit_direction -
+                    (rec.normal * 2f32 *
+                     dot(&unit_direction, &rec.normal));
+                scattered = ray::Ray::new_from_vector(&rec.p, &(reflected + (random_in_unit_sphere() * current_sphere.fuzz)));
+                dot(&scattered.direction(), &rec.normal) > 0f32
+            }
+        };
+
+        if depth < 50 && scatter
+        {
+            return current_sphere.albedo * color(&mut scattered,
+                                                 spheres, tmin, tmax,
+                                                 depth + 1);
+        }
+        else
+        {
+            return vec3f::Vec3f32::zeroes();
+        }
     }
     else
     {
@@ -154,14 +178,32 @@ fn main() {
             centre: vec3f::Vec3f32::new_from_points(0.0, 0.0, -1.0),
             radius: 0.5,
             material: Material::Lambertian,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.3, 0.3)
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.3, 0.3),
+            fuzz: 1f32
         },
         Sphere
         {
             centre: vec3f::Vec3f32::new_from_points(0.0, -100.5, -1.0),
             radius: 100.0,
             material: Material::Lambertian,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.3)
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.3),
+            fuzz: 1f32
+        },
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(1.0, 0.0, -1.0),
+            radius: 0.5,
+            material: Material::Metal,
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.6, 0.2),
+            fuzz: 1f32
+        },
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(-1.0, 0.0, -1.0),
+            radius: 0.5,
+            material: Material::Metal,
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.8),
+            fuzz: 0.2f32
         }
     ];
 
@@ -189,7 +231,7 @@ fn main() {
                 let mut r = ray::Ray::new_from_vector(&camera.origin,
                                                       &direction);
 
-                col += color(&mut r, &world, 0.00001, f32::MAX);
+                col += color(&mut r, &world, 0.001, f32::MAX, 0);
             }
 
 
