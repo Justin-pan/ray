@@ -11,6 +11,7 @@ enum Material
 {
     Lambertian,
     Metal,
+    Dielectric,
 }
 
 struct HitRecord
@@ -26,7 +27,8 @@ struct Sphere
     radius: f32,
     material: Material,
     albedo: vec3f::Vec3f32,
-    fuzz: f32
+    fuzz: f32,
+    refraction: f32
 }
 
 struct Camera
@@ -134,6 +136,45 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
                      dot(&unit_direction, &rec.normal));
                 scattered = ray::Ray::new_from_vector(&rec.p, &(reflected + (random_in_unit_sphere() * current_sphere.fuzz)));
                 dot(&scattered.direction(), &rec.normal) > 0f32
+            },
+
+            Material::Dielectric =>
+            {
+                let outward_normal: vec3f::Vec3f32;
+                let unit_direction = r.direction().unit_vector();
+                let reflected = unit_direction -
+                    (rec.normal * 2f32 *
+                     dot(&unit_direction, &rec.normal));
+                let ni_over_nt: f32;
+                let refracted: vec3f::Vec3f32;
+                if dot(&r.direction(), &rec.normal) > 0.0
+                {
+                    outward_normal = -rec.normal;
+                    ni_over_nt = current_sphere.refraction;
+                }
+                else
+                {
+                    outward_normal = rec.normal;
+                    ni_over_nt = 1.0 / current_sphere.refraction;
+                }
+                let dt = dot(&unit_direction, &outward_normal);
+                let discriminant = 1.0 - ni_over_nt * ni_over_nt *
+                    (1.0 - dt * dt);
+                if discriminant > 0.0
+                {
+                    refracted = (unit_direction -
+                                 outward_normal * dt) *
+                        ni_over_nt - outward_normal *
+                        discriminant.sqrt();
+                    scattered = ray::Ray::new_from_vector(&rec.p,
+                                                          &refracted);
+                }
+                else
+                {
+                    scattered = ray::Ray::new_from_vector(&rec.p,
+                                                          &reflected);
+                }
+                true
             }
         };
 
@@ -179,7 +220,8 @@ fn main() {
             radius: 0.5,
             material: Material::Lambertian,
             albedo: vec3f::Vec3f32::new_from_points(0.8, 0.3, 0.3),
-            fuzz: 1f32
+            fuzz: 1f32,
+            refraction: 0.0
         },
         Sphere
         {
@@ -187,7 +229,8 @@ fn main() {
             radius: 100.0,
             material: Material::Lambertian,
             albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.3),
-            fuzz: 1f32
+            fuzz: 1f32,
+            refraction: 0.0
         },
         Sphere
         {
@@ -195,15 +238,17 @@ fn main() {
             radius: 0.5,
             material: Material::Metal,
             albedo: vec3f::Vec3f32::new_from_points(0.8, 0.6, 0.2),
-            fuzz: 1f32
+            fuzz: 1f32,
+            refraction: 0.0
         },
         Sphere
         {
             centre: vec3f::Vec3f32::new_from_points(-1.0, 0.0, -1.0),
             radius: 0.5,
-            material: Material::Metal,
+            material: Material::Dielectric,
             albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.8),
-            fuzz: 0.2f32
+            fuzz: 0.2f32,
+            refraction: 1.5
         }
     ];
 

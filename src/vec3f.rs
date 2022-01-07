@@ -232,3 +232,18 @@ impl std::ops::AddAssign<Vec3f32> for Vec3f32
         self.z += other.z;
     }
 }
+
+impl std::ops::Neg for Vec3f32
+{
+    type Output = Self;
+
+    fn neg(self) -> Self
+    {
+        Vec3f32
+        {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z
+        }
+    }
+}
