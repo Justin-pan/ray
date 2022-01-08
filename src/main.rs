@@ -118,6 +118,7 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
     if hit_anything
     {
         let mut scattered: ray::Ray;
+        let attenuation: vec3f::Vec3f32;
         let scatter = match current_sphere.material
         {
             Material::Lambertian =>
@@ -125,6 +126,7 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
                 let target = rec.p + rec.normal
                     + random_in_unit_sphere();
                 scattered = ray::Ray::new_from_vector(&rec.p, &(target - rec.p));
+                attenuation = current_sphere.albedo;
                 true
             },
 
@@ -135,27 +137,36 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
                     (rec.normal * 2f32 *
                      dot(&unit_direction, &rec.normal));
                 scattered = ray::Ray::new_from_vector(&rec.p, &(reflected + (random_in_unit_sphere() * current_sphere.fuzz)));
+                attenuation = current_sphere.albedo;
                 dot(&scattered.direction(), &rec.normal) > 0f32
             },
 
             Material::Dielectric =>
             {
+                attenuation = vec3f::Vec3f32::new_from_points(1.0, 1.0, 1.0);
                 let outward_normal: vec3f::Vec3f32;
                 let unit_direction = r.direction().unit_vector();
                 let reflected = unit_direction -
                     (rec.normal * 2f32 *
                      dot(&unit_direction, &rec.normal));
                 let ni_over_nt: f32;
-                let refracted: vec3f::Vec3f32;
+                let mut refracted = vec3f::Vec3f32::zeroes();
+                let reflect_prob: f32;
+                let cosine: f32;
                 if dot(&r.direction(), &rec.normal) > 0.0
                 {
                     outward_normal = -rec.normal;
                     ni_over_nt = current_sphere.refraction;
+                    cosine = ni_over_nt * dot(&r.direction(),
+                                              &rec.normal) /
+                        r.direction().length();
                 }
                 else
                 {
                     outward_normal = rec.normal;
                     ni_over_nt = 1.0 / current_sphere.refraction;
+                    cosine = -dot(&r.direction(), &rec.normal) /
+                        r.direction().length();
                 }
                 let dt = dot(&unit_direction, &outward_normal);
                 let discriminant = 1.0 - ni_over_nt * ni_over_nt *
@@ -166,13 +177,22 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
                                  outward_normal * dt) *
                         ni_over_nt - outward_normal *
                         discriminant.sqrt();
-                    scattered = ray::Ray::new_from_vector(&rec.p,
-                                                          &refracted);
+                    let mut r0 = (1.0 - current_sphere.refraction)
+                        / (1.0 + current_sphere.refraction);
+                    r0 = r0 * r0;
+                    reflect_prob = r0 + (1.0 - r0) * (1.0 - cosine).powi(5);
                 }
                 else
                 {
-                    scattered = ray::Ray::new_from_vector(&rec.p,
-                                                          &reflected);
+                    reflect_prob = 1.0;
+                }
+                if rand::random::<f32>() < reflect_prob
+                {
+                    scattered = ray::Ray::new_from_vector(&rec.p, &reflected);
+                }
+                else
+                {
+                    scattered = ray::Ray::new_from_vector(&rec.p, &refracted);
                 }
                 true
             }
@@ -180,9 +200,9 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
 
         if depth < 50 && scatter
         {
-            return current_sphere.albedo * color(&mut scattered,
-                                                 spheres, tmin, tmax,
-                                                 depth + 1);
+            return attenuation * color(&mut scattered,
+                                       spheres, tmin, tmax,
+                                       depth + 1);
         }
         else
         {
@@ -245,6 +265,15 @@ fn main() {
         {
             centre: vec3f::Vec3f32::new_from_points(-1.0, 0.0, -1.0),
             radius: 0.5,
+            material: Material::Dielectric,
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.8),
+            fuzz: 0.2f32,
+            refraction: 1.5
+        },
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(-1.0, 0.0, -1.0),
+            radius: -0.45,
             material: Material::Dielectric,
             albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.8),
             fuzz: 0.2f32,
