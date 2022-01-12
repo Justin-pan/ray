@@ -2,6 +2,7 @@
 mod vec3f;
 mod mat;
 mod ray;
+mod camera;
 
 use std::fs;
 use std::io::Write;
@@ -29,14 +30,6 @@ struct Sphere
     albedo: vec3f::Vec3f32,
     fuzz: f32,
     refraction: f32
-}
-
-struct Camera
-{
-    lower_left_corner: vec3f::Vec3f32,
-    horizontal: vec3f::Vec3f32,
-    vertical: vec3f::Vec3f32,
-    origin: vec3f::Vec3f32,
 }
 
 fn random_in_unit_sphere() -> vec3f::Vec3f32
@@ -221,13 +214,6 @@ fn color(r: &mut ray::Ray, spheres: &[Sphere],
     }
 }
 
-fn direction_from_camera(camera: &Camera, u: f32, v: f32)
-                         -> vec3f::Vec3f32
-{
-    camera.lower_left_corner + camera.horizontal * u +
-        camera.vertical * v - camera.origin
-}
-
 fn main() {
     fs::create_dir_all("../data").unwrap();
     //let mut file = fs::File::create("j:/rust/data/foo.ppm").unwrap();
@@ -285,13 +271,11 @@ fn main() {
     let ny: f32 = 300f32;
     let ns: f32 = 100f32;
     write!(&mut file, "P3\n {} {}\n255\n", nx, ny).unwrap();
-    let camera = Camera
-    {
-        lower_left_corner: vec3f::Vec3f32::new_from_points(-2.0, -1.0, -1.0),
-        horizontal: vec3f::Vec3f32::new_from_points(4.0, 0.0, 0.0),
-        vertical: vec3f::Vec3f32::new_from_points(0.0, 2.0, 0.0),
-        origin: vec3f::Vec3f32::new_from_points(0.0, 0.0, 0.0),
-    };
+    let look_from = vec3f::Vec3f32::new_from_points(-2.0, 2.0, 1.0);
+    let look_at = vec3f::Vec3f32::new_from_points(0.0, 0.0, -1.0);
+    let vup = vec3f::Vec3f32::new_from_points(0.0, 1.0, 0.0);
+    let camera = camera::Camera::new(look_from, look_at,
+                                     vup, 90.0, nx/ny);
     for j in (0 .. ny as u32).rev()
     {
         for i in 0 .. nx as u32
@@ -301,9 +285,7 @@ fn main() {
             {
                 let u = (i as f32 + rand::random::<f32>()) / nx;
                 let v = (j as f32 + rand::random::<f32>()) / ny;
-                let direction = direction_from_camera(&camera, u, v);
-                let mut r = ray::Ray::new_from_vector(&camera.origin,
-                                                      &direction);
+                let mut r = camera.get_ray(u, v);
 
                 col += color(&mut r, &world, 0.001, f32::MAX, 0);
             }
