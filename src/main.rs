@@ -219,63 +219,136 @@ fn main() {
     //let mut file = fs::File::create("j:/rust/data/foo.ppm").unwrap();
     let mut file = fs::File::create("/home/justin/Documents/ray/data/foo.ppm").unwrap();
 
-    let world = [
+    let mut world: Vec<Sphere> = Vec::new();
+    world.push(
         Sphere
         {
-            centre: vec3f::Vec3f32::new_from_points(0.0, 0.0, -1.0),
-            radius: 0.5,
+            centre: vec3f::Vec3f32::new_from_points(0.0, -1000.0, 0.0),
+            radius: 1000.0,
             material: Material::Lambertian,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.3, 0.3),
-            fuzz: 1f32,
-            refraction: 0.0
-        },
+            albedo: vec3f::Vec3f32::new_from_points(0.5, 0.5, 0.5),
+            fuzz: 1.0,
+            refraction: 1.0
+        }
+    );
+
+    for a in -11 .. 11
+    {
+        for b in -11 .. 11
+        {
+            let a_f = a as f32;
+            let b_f = b as f32;
+            let choose_mat = rand::random::<f32>();
+            let centre = vec3f::Vec3f32::new_from_points(a_f + 0.9 *
+                                                         rand::random::<f32>(),
+                                                         0.2,
+                                                         b_f + 0.9 *
+                                                         rand::random::<f32>());
+            let big_sphere_centre = vec3f::Vec3f32::new_from_points(4.0, 0.2, 0.0);
+            if (centre - big_sphere_centre).length() > 0.9
+            {
+                if choose_mat < 0.8
+                {
+                    // diffuse
+                    world.push(
+                        Sphere
+                        {
+                            centre: centre,
+                            radius: 0.2,
+                            material: Material::Lambertian,
+                            albedo: vec3f::Vec3f32::new_from_points(rand::random::<f32>() *
+                                                                    rand::random::<f32>(),
+                                                                    rand::random::<f32>() *
+                                                                    rand::random::<f32>(),
+                                                                    rand::random::<f32>() *
+                                                                    rand::random::<f32>()),
+                            fuzz: 1.0,
+                            refraction: 1.0
+                        }
+                    );
+                }
+                else if choose_mat < 0.95
+                {
+                    // metal
+                    world.push(
+                        Sphere
+                        {
+                            centre: centre,
+                            radius: 0.2,
+                            material: Material::Metal,
+                            albedo: vec3f::Vec3f32::new_from_points(0.5 * (1.0 + rand::random::<f32>()),
+                                                                    0.5 * (1.0 + rand::random::<f32>()),
+                                                                    0.5 * (1.0 + rand::random::<f32>())),
+                            fuzz: 0.5 * rand::random::<f32>(),
+                            refraction: 1.0
+                        }
+                    );
+                }
+                else
+                {
+                    // glass
+                    world.push(
+                        Sphere
+                        {
+                            centre: centre,
+                            radius: 0.2,
+                            material: Material::Dielectric,
+                            albedo: vec3f::Vec3f32::new_from_points(1.0, 1.0, 1.0),
+                            fuzz: 1.0,
+                            refraction: 1.0 + rand::random::<f32>(),
+                        }
+                    );
+                }
+            }
+        }
+    }
+
+    world.push(
         Sphere
         {
-            centre: vec3f::Vec3f32::new_from_points(0.0, -100.5, -1.0),
-            radius: 100.0,
-            material: Material::Lambertian,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.3),
-            fuzz: 1f32,
-            refraction: 0.0
-        },
-        Sphere
-        {
-            centre: vec3f::Vec3f32::new_from_points(1.0, 0.0, -1.0),
-            radius: 0.5,
-            material: Material::Metal,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.6, 0.2),
-            fuzz: 1f32,
-            refraction: 0.0
-        },
-        Sphere
-        {
-            centre: vec3f::Vec3f32::new_from_points(-1.0, 0.0, -1.0),
-            radius: 0.5,
+            centre: vec3f::Vec3f32::new_from_points(0.0, 1.0, 0.0),
+            radius: 1.0,
             material: Material::Dielectric,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.8),
-            fuzz: 0.2f32,
-            refraction: 1.5
-        },
-        Sphere
-        {
-            centre: vec3f::Vec3f32::new_from_points(-1.0, 0.0, -1.0),
-            radius: -0.45,
-            material: Material::Dielectric,
-            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.8, 0.8),
-            fuzz: 0.2f32,
+            albedo: vec3f::Vec3f32::new_from_points(1.0, 1.0, 1.0),
+            fuzz: 1.0,
             refraction: 1.5
         }
-    ];
+    );
+    world.push(
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(-4.0, 1.0, 0.0),
+            radius: 1.0,
+            material: Material::Lambertian,
+            albedo: vec3f::Vec3f32::new_from_points(0.4, 0.2, 0.1),
+            fuzz: 1.0,
+            refraction: 1.0
+        }
+    );
+    world.push(
+        Sphere
+        {
+            centre: vec3f::Vec3f32::new_from_points(4.0, 1.0, 0.0),
+            radius: 1.0,
+            material: Material::Metal,
+            albedo: vec3f::Vec3f32::new_from_points(0.8, 0.6, 0.5),
+            fuzz: 0.0,
+            refraction: 1.0
+        }
+    );
 
     let nx: f32 = 600f32;
     let ny: f32 = 300f32;
     let ns: f32 = 100f32;
     write!(&mut file, "P3\n {} {}\n255\n", nx, ny).unwrap();
-    let look_from = vec3f::Vec3f32::new_from_points(-2.0, 2.0, 1.0);
-    let look_at = vec3f::Vec3f32::new_from_points(0.0, 0.0, -1.0);
+    let look_from = vec3f::Vec3f32::new_from_points(13.0, 2.0, 3.0);
+    let look_at = vec3f::Vec3f32::new_from_points(0.0, 0.0, 0.0);
     let vup = vec3f::Vec3f32::new_from_points(0.0, 1.0, 0.0);
+    let dist_to_focus = 10.0;
+    let aperature = 0.1;
     let camera = camera::Camera::new(look_from, look_at,
-                                     vup, 90.0, nx/ny);
+                                     vup, 20.0, nx/ny, aperature,
+                                     dist_to_focus);
     for j in (0 .. ny as u32).rev()
     {
         for i in 0 .. nx as u32
